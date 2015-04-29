@@ -71,4 +71,7 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+#define HASHFUNC ${HASH_TYPE}
+#define HASHLEN ${HASH_TYPE}_DIGEST_LENGTH
+
 #endif
