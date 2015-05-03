@@ -76,6 +76,11 @@ void badAllocationHandler()
 	exit(-1);
 }
 
+void sigintHandler(int) {
+	std::cout << "SIGINT or SIGTERM received, shutting game server down..." << std::endl;
+	g_game.setGameState(GAME_STATE_SHUTDOWN);
+}
+
 int main(int argc, char* argv[])
 {
 	// Setup bad allocation handler
@@ -89,6 +94,14 @@ int main(int argc, char* argv[])
 	sigemptyset(&sigh.sa_mask);
 	sigaction(SIGPIPE, &sigh, nullptr);
 #endif
+
+	// Setup interrupt signal handler (Ctrl+C or kill pid)
+	struct sigaction sigint;
+	sigint.sa_handler = sigintHandler;
+	sigint.sa_flags = 0;
+	sigemptyset(&sigint.sa_mask);
+	sigaction(SIGINT, &sigint, nullptr);
+	sigaction(SIGTERM, &sigint, nullptr);
 
 	ServiceManager serviceManager;
 
