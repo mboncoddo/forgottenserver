@@ -303,7 +303,11 @@ ReturnValue Actions::internalUseItem(Player* player, const Position& pos, uint8_
 
 		if (bed->trySleep(player)) {
 			player->setBedItem(bed);
-			g_game.sendOfflineTrainingDialog(player);
+			if (g_config.getBoolean(ConfigManager::OFFLINE_TRAINING_SYSTEM)) {
+				g_game.sendOfflineTrainingDialog(player);
+			} else {
+				bed->sleep(player);
+			}
 		}
 
 		return RETURNVALUE_NOERROR;

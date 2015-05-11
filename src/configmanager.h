@@ -44,6 +44,7 @@ class ConfigManager
 			WARN_UNSAFE_SCRIPTS,
 			CONVERT_UNSAFE_SCRIPTS,
 			CLASSIC_EQUIPMENT_SLOTS,
+			OFFLINE_TRAINING_SYSTEM,
 
 			LAST_BOOLEAN_CONFIG /* this must be the last one */
 		};
