@@ -318,6 +318,21 @@ ReturnValue Actions::internalUseItem(Player* player, const Position& pos, uint8_
 			myDepotLocker->setParent(depot->getParent()->getTile());
 			openContainer = myDepotLocker;
 			player->setLastDepotId(depot->getDepotId());
+		} else if (RewardChest* rewardChest = container->getRewardChest()) {
+			RewardChest* myRewardChest = player->getRewardChest();
+			myRewardChest->setParent(rewardChest->getParent());
+
+			// flush all containers still in corpse to chest
+			player->flushRewardContainers();
+			openContainer = myRewardChest;
+		} else if (RewardContainer* rewardContainer = container->getRewardContainer()) {
+			// prevent duplicates
+			if (RewardContainer* myRewardContainer = player->getRewardContainer(container->getOwner())) {
+				myRewardContainer->setParent(rewardContainer->getParent());
+				openContainer = myRewardContainer;
+			} else {
+				openContainer = container;
+			}
 		} else {
 			openContainer = container;
 		}

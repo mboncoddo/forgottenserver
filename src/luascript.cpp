@@ -8087,6 +8087,25 @@ int LuaScriptInterface::luaPlayerGetInbox(lua_State* L)
 	return 1;
 }
 
+int LuaScriptInterface::luaPlayerGetRewardChest(lua_State* L)
+{
+	// player:getRewardChest()
+	Player* player = getUserdata<Player>(L, 1);
+	if (!player) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	RewardChest* rewardChest = player->getRewardChest();
+	if (rewardChest) {
+		pushUserdata<Container>(L, rewardChest);
+		setItemMetatable(L, -1, rewardChest);
+	} else {
+		pushBoolean(L, false);
+	}
+	return 1;
+}
+
 int LuaScriptInterface::luaPlayerGetSkullTime(lua_State* L)
 {
 	// player:getSkullTime()

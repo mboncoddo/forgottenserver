@@ -52,6 +52,10 @@ Item* Item::CreateItem(const uint16_t _type, uint16_t _count /*= 0*/)
 	if (it.id != 0) {
 		if (it.isDepot()) {
 			newItem = new DepotLocker(_type);
+		} else if (it.isRewardChest()) {
+			newItem = new RewardChest(_type);
+		} else if (it.isRewardContainer()) {
+			newItem = new RewardContainer(_type);
 		} else if (it.isContainer()) {
 			newItem = new Container(_type);
 		} else if (it.isTeleport()) {

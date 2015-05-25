@@ -151,6 +151,9 @@ Player::Player(ProtocolGame* p) :
 	inbox = new Inbox(ITEM_INBOX);
 	inbox->incrementReferenceCounter();
 
+	rewardChest = new RewardChest(ITEM_REWARDCHEST);
+	rewardChest->incrementReferenceCounter();
+
 	offlineTrainingSkill = -1;
 	offlineTrainingTime = 0;
 	lastStatsTrainingTime = 0;
@@ -179,6 +182,7 @@ Player::~Player()
 	}
 
 	inbox->decrementReferenceCounter();
+	rewardChest->decrementReferenceCounter();
 
 	setWriteItem(nullptr);
 	setEditHouse(nullptr);
@@ -4681,4 +4685,36 @@ std::forward_list<Condition*> Player::getMuteConditions() const
 		muteConditions.push_front(condition);
 	}
 	return muteConditions;
+}
+
+bool Player::addRewardContainer(RewardContainer* rewardContainer, uint32_t corpseId)
+{
+	// TODO: check for duplicates
+	if (corpseId != 0) {
+		pendingRewardContainers[corpseId] = rewardContainer;
+	} else {
+		rewardChest->addItem(rewardContainer);
+	}
+
+	return true;
+}
+
+void Player::flushRewardContainers()
+{
+	for (auto& rewardContainer : pendingRewardContainers) {
+		rewardChest->addItem(rewardContainer.second);
+	}
+
+	pendingRewardContainers.clear();
+}
+
+RewardContainer* Player::getRewardContainer(uint32_t corpseId)
+{
+	auto rewardContainer = pendingRewardContainers.find(corpseId);
+
+	if (rewardContainer != pendingRewardContainers.end()) {
+		return rewardContainer->second;
+	}
+
+	return nullptr;
 }

@@ -471,6 +471,10 @@ void Items::parseItemNode(const pugi::xml_node& itemNode, uint16_t id)
 				it.type = ITEM_TYPE_CONTAINER;
 			} else if (tmpStrValue == "depot") {
 				it.type = ITEM_TYPE_DEPOT;
+			} else if (tmpStrValue == "rewardchest") {
+				it.type = ITEM_TYPE_REWARDCHEST;
+			} else if (tmpStrValue == "rewardcontainer") {
+				it.type = ITEM_TYPE_REWARDCONTAINER;
 			} else if (tmpStrValue == "mailbox") {
 				it.type = ITEM_TYPE_MAILBOX;
 			} else if (tmpStrValue == "trashholder") {

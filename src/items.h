@@ -46,6 +46,8 @@ enum SlotPositionBits : uint32_t {
 enum ItemTypes_t {
 	ITEM_TYPE_NONE,
 	ITEM_TYPE_DEPOT,
+	ITEM_TYPE_REWARDCHEST,
+	ITEM_TYPE_REWARDCONTAINER,
 	ITEM_TYPE_MAILBOX,
 	ITEM_TYPE_TRASHHOLDER,
 	ITEM_TYPE_CONTAINER,
@@ -146,6 +148,12 @@ class ItemType
 		}
 		bool isMailbox() const {
 			return (type == ITEM_TYPE_MAILBOX);
+		}
+		bool isRewardChest() const {
+			return (type == ITEM_TYPE_REWARDCHEST);
+		}
+		bool isRewardContainer() const {
+			return (type == ITEM_TYPE_REWARDCONTAINER);
 		}
 		bool isTrashHolder() const {
 			return (type == ITEM_TYPE_TRASHHOLDER);

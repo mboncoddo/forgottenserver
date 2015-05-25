@@ -32,6 +32,8 @@
 #include "inbox.h"
 #include "depotchest.h"
 #include "depotlocker.h"
+#include "rewardchest.h"
+#include "rewardcontainer.h"
 #include "guild.h"
 #include "groups.h"
 #include "town.h"
@@ -265,6 +267,10 @@ class Player final : public Creature, public Cylinder
 
 		Inbox* getInbox() const {
 			return inbox;
+		}
+
+		RewardChest* getRewardChest() const {
+			return rewardChest;
 		}
 
 		uint16_t getClientIcons() const;
@@ -1141,6 +1147,11 @@ class Player final : public Creature, public Cylinder
 		void forgetInstantSpell(const std::string& spellName);
 		bool hasLearnedInstantSpell(const std::string& spellName) const;
 
+		bool addRewardContainer(RewardContainer* rewardContainer, uint32_t corpseId = 0);
+		void flushRewardContainers();
+		RewardContainer* getRewardContainer(uint32_t corpseId);
+
+
 	protected:
 		std::forward_list<Condition*> getMuteConditions() const;
 
@@ -1195,6 +1206,7 @@ class Player final : public Creature, public Cylinder
 		std::map<uint32_t, DepotLocker*> depotLockerMap;
 		std::map<uint32_t, DepotChest*> depotChests;
 		std::map<uint32_t, int32_t> storageMap;
+		std::map<uint32_t, RewardContainer*> pendingRewardContainers;
 
 		std::vector<OutfitEntry> outfits;
 		GuildWarList guildWarList;
@@ -1234,6 +1246,7 @@ class Player final : public Creature, public Cylinder
 		Guild* guild;
 		Group* group;
 		Inbox* inbox;
+		RewardChest* rewardChest;
 		Item* tradeItem;
 		Item* inventory[CONST_SLOT_LAST + 1];
 		Item* writeItem;
