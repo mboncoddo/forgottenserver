@@ -139,6 +139,17 @@ bool CreatureEvents::playerAdvance(Player* player, skills_t skill, uint32_t oldL
 	return true;
 }
 
+bool CreatureEvents::playerReport(Player* player, const std::string& message,
+                                      const Position& position, uint8_t category) const
+{
+	for (const auto& it : m_creatureEvents) {
+		if (it.second->getEventType() == CREATURE_EVENT_REPORT) {
+			it.second->executeOnReport(player, message, position, category);
+		}
+	}
+	return true;
+}
+
 /////////////////////////////////////
 
 CreatureEvent::CreatureEvent(LuaScriptInterface* _interface) :
@@ -189,6 +200,8 @@ bool CreatureEvent::configureEvent(const pugi::xml_node& node)
 		m_type = CREATURE_EVENT_HEALTHCHANGE;
 	} else if (tmpStr == "manachange") {
 		m_type = CREATURE_EVENT_MANACHANGE;
+	} else if (tmpStr == "report") {
+		m_type = CREATURE_EVENT_REPORT;
 	} else if (tmpStr == "extendedopcode") {
 		m_type = CREATURE_EVENT_EXTENDED_OPCODE;
 	} else {
@@ -236,6 +249,9 @@ std::string CreatureEvent::getScriptEventName() const
 
 		case CREATURE_EVENT_MANACHANGE:
 			return "onManaChange";
+
+		case CREATURE_EVENT_REPORT:
+			return "onReport";
 
 		case CREATURE_EVENT_EXTENDED_OPCODE:
 			return "onExtendedOpcode";
@@ -561,6 +577,30 @@ void CreatureEvent::executeManaChange(Creature* creature, Creature* attacker, in
 	lua_pop(L, 1);
 
 	m_scriptInterface->resetScriptEnv();
+}
+
+void CreatureEvent::executeOnReport(Player* player, const std::string& message,
+                                        const Position& position, uint8_t category)
+{
+	//onReport(player, message, position, category)
+	if (!m_scriptInterface->reserveScriptEnv()) {
+		std::cout << "[Error - CreatureEvent::executeOnReport] Call stack overflow" << std::endl;
+		return;
+	}
+
+	ScriptEnvironment* env = m_scriptInterface->getScriptEnv();
+	env->setScriptId(m_scriptId, m_scriptInterface);
+
+	lua_State* L = m_scriptInterface->getLuaState();
+	m_scriptInterface->pushFunction(m_scriptId);
+
+	LuaScriptInterface::pushUserdata<Player>(L, player);
+	LuaScriptInterface::setMetatable(L, -1, "Player");
+	LuaScriptInterface::pushString(L, message);
+	LuaScriptInterface::pushPosition(L, position);
+	lua_pushnumber(L, category);
+
+	m_scriptInterface->callVoidFunction(4);
 }
 
 void CreatureEvent::executeExtendedOpcode(Player* player, uint8_t opcode, const std::string& buffer)
