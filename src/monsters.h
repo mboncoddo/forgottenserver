@@ -156,6 +156,7 @@ class MonsterType
 		bool isConvinceable;
 		bool isAttackable;
 		bool isHostile;
+		bool isPassive;
 		bool hiddenHealth;
 
 		void createLoot(Container* corpse);

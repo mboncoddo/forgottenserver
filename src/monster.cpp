@@ -640,6 +640,10 @@ bool Monster::selectTarget(Creature* creature)
 		return false;
 	}
 
+	if (isPassive() && !hasBeenAttacked(creature->getID())) {
+		return false;
+	}
+
 	auto it = std::find(targetList.begin(), targetList.end(), creature);
 	if (it == targetList.end()) {
 		//Target not found in our target list.
