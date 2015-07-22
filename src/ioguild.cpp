@@ -39,7 +39,7 @@ uint32_t IOGuild::getGuildIdByName(const std::string& name)
 void IOGuild::getWarList(uint32_t guildId, GuildWarList& guildWarList)
 {
 	std::ostringstream query;
-	query << "SELECT `guild1`, `guild2` FROM `guild_wars` WHERE (`guild1` = " << guildId << " OR `guild2` = " << guildId << ") AND `ended` = 0 AND `status` = 1";
+	query << "SELECT `guild1`, `guild2` FROM `guild_wars` WHERE (`guild1` = " << guildId << " OR `guild2` = " << guildId << ") AND `ended_at` IS NULL AND `status` = 1";
 
 	DBResult_ptr result = Database::getInstance()->storeQuery(query.str());
 	if (!result) {
