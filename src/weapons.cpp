@@ -382,10 +382,7 @@ bool Weapon::useFist(Player* player, Creature* target)
 void Weapon::internalUseWeapon(Player* player, Item* item, Creature* target, int32_t damageModifier) const
 {
 	if (m_scripted) {
-		LuaVariant var;
-		var.type = VARIANT_NUMBER;
-		var.number = target->getID();
-		executeUseWeapon(player, var);
+		executeUseWeapon(player, {target->getID()});
 	} else {
 		CombatDamage damage;
 		WeaponType_t weaponType = item->getWeaponType();
@@ -407,10 +404,7 @@ void Weapon::internalUseWeapon(Player* player, Item* item, Creature* target, int
 void Weapon::internalUseWeapon(Player* player, Item* item, Tile* tile) const
 {
 	if (m_scripted) {
-		LuaVariant var;
-		var.type = VARIANT_TARGETPOSITION;
-		var.pos = tile->getPosition();
-		executeUseWeapon(player, var);
+		executeUseWeapon(player, {VARIANT_TARGETPOSITION, tile->getPosition()});
 	} else {
 		Combat::postCombatEffects(player, tile->getPosition(), params);
 		g_game.addMagicEffect(tile->getPosition(), CONST_ME_POFF);

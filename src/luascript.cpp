@@ -4421,24 +4421,19 @@ int LuaScriptInterface::luaGameStartRaid(lua_State* L)
 // Variant
 int LuaScriptInterface::luaVariantCreate(lua_State* L)
 {
-	// Variant(number or string or position or thing)
-	LuaVariant variant;
 	if (isUserdata(L, 2)) {
 		if (Thing* thing = getThing(L, 2)) {
-			variant.type = VARIANT_TARGETPOSITION;
-			variant.pos = thing->getPosition();
+			pushVariant(L, {VARIANT_TARGETPOSITION, thing->getPosition()});
+		} else {
+			pushVariant(L, {});
 		}
 	} else if (isTable(L, 2)) {
-		variant.type = VARIANT_POSITION;
-		variant.pos = getPosition(L, 2);
+		pushVariant(L, {VARIANT_POSITION, getPosition(L, 2)});
 	} else if (isNumber(L, 2)) {
-		variant.type = VARIANT_NUMBER;
-		variant.number = getNumber<uint32_t>(L, 2);
+		pushVariant(L, {getNumber<uint32_t>(L, 2)});
 	} else if (isString(L, 2)) {
-		variant.type = VARIANT_STRING;
-		variant.text = getString(L, 2);
+		pushVariant(L, {getString(L, 2)});
 	}
-	pushVariant(L, variant);
 	return 1;
 }
 

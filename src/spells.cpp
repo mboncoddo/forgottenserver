@@ -294,16 +294,14 @@ bool CombatSpell::loadScriptCombat()
 bool CombatSpell::castSpell(Creature* creature)
 {
 	if (m_scripted) {
-		LuaVariant var;
-		var.type = VARIANT_POSITION;
-
+		Position pos;
 		if (needDirection) {
-			var.pos = Spells::getCasterPosition(creature, creature->getDirection());
+			pos = Spells::getCasterPosition(creature, creature->getDirection());
 		} else {
-			var.pos = creature->getPosition();
+			pos = creature->getPosition();
 		}
 
-		return executeCastSpell(creature, var);
+		return executeCastSpell(creature, {VARIANT_POSITION, pos});
 	}
 
 	Position pos;
@@ -320,23 +318,19 @@ bool CombatSpell::castSpell(Creature* creature)
 bool CombatSpell::castSpell(Creature* creature, Creature* target)
 {
 	if (m_scripted) {
-		LuaVariant var;
-
 		if (combat->hasArea()) {
-			var.type = VARIANT_POSITION;
-
-			if (needTarget) {
-				var.pos = target->getPosition();
-			} else if (needDirection) {
-				var.pos = Spells::getCasterPosition(creature, creature->getDirection());
-			} else {
-				var.pos = creature->getPosition();
-			}
-		} else {
-			var.type = VARIANT_NUMBER;
-			var.number = target->getID();
+			return executeCastSpell(creature, {target->getID()});
 		}
-		return executeCastSpell(creature, var);
+
+		Position pos;
+		if (needTarget) {
+			pos = target->getPosition();
+		} else if (needDirection) {
+			pos = Spells::getCasterPosition(creature, creature->getDirection());
+		} else {
+			pos = creature->getPosition();
+		}
+		return executeCastSpell(creature, {VARIANT_POSITION, pos});
 	}
 
 	if (combat->hasArea()) {
@@ -1116,8 +1110,6 @@ bool InstantSpell::canThrowSpell(const Creature* creature, const Creature* targe
 
 bool InstantSpell::castSpell(Creature* creature)
 {
-	LuaVariant var;
-
 	if (casterTargetOrDirection) {
 		Creature* target = creature->getAttackedCreature();
 		if (target && target->getHealth() > 0) {
@@ -1125,30 +1117,27 @@ bool InstantSpell::castSpell(Creature* creature)
 				return false;
 			}
 
-			var.type = VARIANT_NUMBER;
-			var.number = target->getID();
-			return internalCastSpell(creature, var);
+			return internalCastSpell(creature, {target->getID()});
 		}
 
 		return false;
-	} else if (needDirection) {
-		var.type = VARIANT_POSITION;
-		var.pos = Spells::getCasterPosition(creature, creature->getDirection());
-	} else {
-		var.type = VARIANT_POSITION;
-		var.pos = creature->getPosition();
 	}
 
+	Position pos;
+	if (needDirection) {
+		pos = Spells::getCasterPosition(creature, creature->getDirection());
+	} else {
+		pos = creature->getPosition();
+	}
+
+	LuaVariant var(VARIANT_POSITION, pos);
 	return internalCastSpell(creature, var);
 }
 
 bool InstantSpell::castSpell(Creature* creature, Creature* target)
 {
 	if (needTarget) {
-		LuaVariant var;
-		var.type = VARIANT_NUMBER;
-		var.number = target->getID();
-		return internalCastSpell(creature, var);
+		return internalCastSpell(creature, {target->getID()});
 	} else {
 		return castSpell(creature);
 	}
@@ -1703,10 +1692,7 @@ bool ConjureSpell::playerCastInstant(Player* player, std::string& param)
 	}
 
 	if (m_scripted) {
-		LuaVariant var;
-		var.type = VARIANT_STRING;
-		var.text = param;
-		return executeCastSpell(player, var);
+		return executeCastSpell(player, {param});
 	}
 	return conjureItem(player);
 }
@@ -1882,28 +1868,24 @@ bool RuneSpell::executeUse(Player* player, Item* item, const Position&, Thing* t
 
 	bool result = false;
 	if (m_scripted) {
-		LuaVariant var;
-
 		if (needTarget) {
-			var.type = VARIANT_NUMBER;
+			uint32_t number = 0;
 
 			if (target == nullptr) {
 				Tile* toTile = g_game.map.getTile(toPosition);
 				if (toTile) {
 					const Creature* visibleCreature = toTile->getBottomVisibleCreature(player);
 					if (visibleCreature) {
-						var.number = visibleCreature->getID();
+						number = visibleCreature->getID();
 					}
 				}
 			} else {
-				var.number = target->getCreature()->getID();
+				number = target->getCreature()->getID();
 			}
+			result = internalCastSpell(player, {number}, isHotkey);
 		} else {
-			var.type = VARIANT_POSITION;
-			var.pos = toPosition;
+			result = internalCastSpell(player, {VARIANT_POSITION, toPosition}, isHotkey);
 		}
-
-		result = internalCastSpell(player, var, isHotkey);
 	} else if (runeFunction) {
 		result = runeFunction(this, player, toPosition);
 	}
@@ -1922,18 +1904,12 @@ bool RuneSpell::executeUse(Player* player, Item* item, const Position&, Thing* t
 
 bool RuneSpell::castSpell(Creature* creature)
 {
-	LuaVariant var;
-	var.type = VARIANT_NUMBER;
-	var.number = creature->getID();
-	return internalCastSpell(creature, var, false);
+	return internalCastSpell(creature, {creature->getID()}, false);
 }
 
 bool RuneSpell::castSpell(Creature* creature, Creature* target)
 {
-	LuaVariant var;
-	var.type = VARIANT_NUMBER;
-	var.number = target->getID();
-	return internalCastSpell(creature, var, false);
+	return internalCastSpell(creature, {target->getID()}, false);
 }
 
 bool RuneSpell::internalCastSpell(Creature* creature, const LuaVariant& var, bool isHotkey)
