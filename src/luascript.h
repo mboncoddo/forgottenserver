@@ -69,15 +69,31 @@ enum LuaDataType {
 };
 
 struct LuaVariant {
-	LuaVariant() {
-		type = VARIANT_NONE;
-		number = 0;
-	}
+	LuaVariant() : type(VARIANT_NONE) {	}
+	LuaVariant(const std::string& text) : type(VARIANT_STRING), text(text) {}
+	LuaVariant(LuaVariantType_t type, const Position& pos) : type(type), pos(pos) {}
+	LuaVariant(uint32_t number) : type(VARIANT_NUMBER), number(number) {}
+	~LuaVariant() {
+		switch (type) {
+			case VARIANT_POSITION:
+			case VARIANT_TARGETPOSITION:
+				pos.~Position();
+				break;
+			case VARIANT_STRING:
+				text.~basic_string<char>();
+				break;
+			default:
+				number = 0;
+		        break;
+		}
+	};
 
 	LuaVariantType_t type;
-	std::string text;
-	Position pos;
-	uint32_t number;
+	union {
+		std::string text;
+		Position pos;
+		uint32_t number;
+	};
 };
 
 struct LuaTimerEventDesc {

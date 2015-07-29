@@ -758,35 +758,36 @@ Outfit_t LuaScriptInterface::getOutfit(lua_State* L, int32_t arg)
 
 LuaVariant LuaScriptInterface::getVariant(lua_State* L, int32_t arg)
 {
-	LuaVariant var;
-	switch (var.type = getField<LuaVariantType_t>(L, arg, "type")) {
+	switch (LuaVariantType_t type = getField<LuaVariantType_t>(L, arg, "type")) {
 		case VARIANT_NUMBER: {
-			var.number = getField<uint32_t>(L, arg, "number");
+			uint32_t number = getField<uint32_t>(L, arg, "number");
 			lua_pop(L, 2);
+			return {number};
 			break;
 		}
 
 		case VARIANT_STRING: {
-			var.text = getFieldString(L, arg, "string");
+			std::string text = getFieldString(L, arg, "string");
 			lua_pop(L, 2);
+			return {text};
 			break;
 		}
 
 		case VARIANT_POSITION:
 		case VARIANT_TARGETPOSITION: {
 			lua_getfield(L, arg, "pos");
-			var.pos = getPosition(L, lua_gettop(L));
+			Position pos = getPosition(L, lua_gettop(L));
 			lua_pop(L, 2);
+			return {type, pos};
 			break;
 		}
 
 		default: {
-			var.type = VARIANT_NONE;
 			lua_pop(L, 1);
+			return {};
 			break;
 		}
 	}
-	return var;
 }
 
 Thing* LuaScriptInterface::getThing(lua_State* L, int32_t arg)
