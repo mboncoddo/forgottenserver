@@ -37,7 +37,6 @@
 #include "spells.h"
 #include "configmanager.h"
 #include "ban.h"
-#include "raids.h"
 #include "database.h"
 #include "server.h"
 #include "ioguild.h"
@@ -143,9 +142,6 @@ void Game::setGameState(GameState_t newState)
 			g_chat->load();
 
 			map.spawns.startup();
-
-			raids.loadFromXml();
-			raids.startup();
 
 			quests.loadFromXml();
 			mounts.loadFromXml();
@@ -4391,7 +4387,6 @@ void Game::shutdown()
 	g_databaseTasks.shutdown();
 	g_dispatcher.shutdown();
 	map.spawns.clear();
-	raids.clear();
 
 	cleanup();
 

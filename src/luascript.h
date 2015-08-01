@@ -567,8 +567,6 @@ class LuaScriptInterface
 		static int luaGameCreateNpc(lua_State* L);
 		static int luaGameCreateTile(lua_State* L);
 
-		static int luaGameStartRaid(lua_State* L);
-
 		// Variant
 		static int luaVariantCreate(lua_State* L);
 
@@ -1242,6 +1240,14 @@ class LuaScriptInterface
 		static int luaPartyIsSharedExperienceEnabled(lua_State* L);
 		static int luaPartyShareExperience(lua_State* L);
 		static int luaPartySetSharedExperience(lua_State* L);
+
+		// Raid
+		static int luaRaidCreate(lua_State* L);
+		static int luaRaidDelete(lua_State* L);
+		static int luaRaidGetInterval(lua_State* L);
+		static int luaRaidGetNextExecution(lua_State* L);
+		static int luaRaidSetNextExecution(lua_State* L);
+		static int luaRaidExecute(lua_State* L);
 
 		//
 		lua_State* m_luaState;

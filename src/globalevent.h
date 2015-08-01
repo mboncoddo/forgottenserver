@@ -30,6 +30,7 @@ enum GlobalEvent_t {
 	GLOBALEVENT_STARTUP,
 	GLOBALEVENT_SHUTDOWN,
 	GLOBALEVENT_RECORD,
+	GLOBALEVENT_RAID,
 };
 
 class GlobalEvent;
@@ -47,6 +48,7 @@ class GlobalEvents final : public BaseEvents
 
 		void startup() const;
 
+		void raid();
 		void timer();
 		void think();
 		void execute(GlobalEvent_t type) const;
@@ -68,8 +70,8 @@ class GlobalEvents final : public BaseEvents
 		}
 		LuaScriptInterface m_scriptInterface;
 
-		GlobalEventMap thinkMap, serverMap, timerMap;
-		int32_t thinkEventId, timerEventId;
+		GlobalEventMap thinkMap, serverMap, timerMap, raidMap;
+		int32_t thinkEventId, timerEventId, raidEventId;
 };
 
 class GlobalEvent final : public Event

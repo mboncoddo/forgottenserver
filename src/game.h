@@ -29,7 +29,6 @@
 #include "item.h"
 #include "container.h"
 #include "player.h"
-#include "raids.h"
 #include "npc.h"
 #include "wildcardtree.h"
 #include "quests.h"
@@ -502,7 +501,6 @@ class Game
 		Groups groups;
 		Map map;
 		Mounts mounts;
-		Raids raids;
 		Quests quests;
 
 	protected:

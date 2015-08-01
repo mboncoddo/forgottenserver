@@ -35,7 +35,6 @@
 #include "talkaction.h"
 #include "movement.h"
 #include "weapons.h"
-#include "raids.h"
 #include "quests.h"
 #include "mounts.h"
 #include "globalevent.h"
@@ -65,7 +64,6 @@ s_defcommands Commands::defined_commands[] = {
 
 	//admin commands
 	{"/reload", &Commands::reloadInfo},
-	{"/raid", &Commands::forceRaid},
 
 	// player commands
 	{"!sellhouse", &Commands::sellHouse}
@@ -266,10 +264,6 @@ void Commands::reloadInfo(Player& player, const std::string& param)
 	} else if (tmpParam == "npc" || tmpParam == "npcs") {
 		Npcs::reload();
 		player.sendTextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "Reloaded npcs.");
-	} else if (tmpParam == "raid" || tmpParam == "raids") {
-		g_game.raids.reload();
-		g_game.raids.startup();
-		player.sendTextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "Reloaded raids.");
 	} else if (tmpParam == "spell" || tmpParam == "spells") {
 		g_spells->reload();
 		g_monsters.reload();
@@ -359,37 +353,4 @@ void Commands::sellHouse(Player& player, const std::string& param)
 	if (!g_game.internalStartTrade(&player, tradePartner, transferItem)) {
 		house->resetTransferItem();
 	}
-}
-
-void Commands::forceRaid(Player& player, const std::string& param)
-{
-	Raid* raid = g_game.raids.getRaidByName(param);
-	if (!raid || !raid->isLoaded()) {
-		player.sendTextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "No such raid exists.");
-		return;
-	}
-
-	if (g_game.raids.getRunning()) {
-		player.sendTextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "Another raid is already being executed.");
-		return;
-	}
-
-	g_game.raids.setRunning(raid);
-
-	RaidEvent* event = raid->getNextRaidEvent();
-	if (!event) {
-		player.sendTextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "The raid does not contain any data.");
-		return;
-	}
-
-	raid->setState(RAIDSTATE_EXECUTING);
-
-	uint32_t ticks = event->getDelay();
-	if (ticks > 0) {
-		g_scheduler.addEvent(createSchedulerTask(ticks, std::bind(&Raid::executeRaidEvent, raid, event)));
-	} else {
-		g_dispatcher.addTask(createTask(std::bind(&Raid::executeRaidEvent, raid, event)));
-	}
-
-	player.sendTextMessage(MESSAGE_STATUS_CONSOLE_BLUE, "Raid started.");
 }

@@ -45,11 +45,12 @@
 #include "bed.h"
 #include "monster.h"
 #include "scheduler.h"
-#include "raids.h"
 #include "databasetasks.h"
+#include "globalevent.h"
 
 extern Chat* g_chat;
 extern Game g_game;
+extern GlobalEvents* g_globalEvents;
 extern Monsters g_monsters;
 extern ConfigManager g_config;
 extern Vocations g_vocations;
@@ -1829,8 +1830,6 @@ void LuaScriptInterface::registerFunctions()
 	registerMethod("Game", "createNpc", LuaScriptInterface::luaGameCreateNpc);
 	registerMethod("Game", "createTile", LuaScriptInterface::luaGameCreateTile);
 
-	registerMethod("Game", "startRaid", LuaScriptInterface::luaGameStartRaid);
-
 	// Variant
 	registerClass("Variant", "", LuaScriptInterface::luaVariantCreate);
 
@@ -2529,6 +2528,19 @@ void LuaScriptInterface::registerFunctions()
 	registerMethod("Party", "isSharedExperienceEnabled", LuaScriptInterface::luaPartyIsSharedExperienceEnabled);
 	registerMethod("Party", "shareExperience", LuaScriptInterface::luaPartyShareExperience);
 	registerMethod("Party", "setSharedExperience", LuaScriptInterface::luaPartySetSharedExperience);
+
+	// Raids
+	registerTable("Raids");
+
+	// Raid
+	registerClass("Raid", "", LuaScriptInterface::luaRaidCreate);
+	registerMetaMethod("Raid", "__gc", LuaScriptInterface::luaRaidDelete);
+	registerMethod("Raid", "delete", LuaScriptInterface::luaRaidDelete);
+
+	registerMethod("Raid", "getInterval", LuaScriptInterface::luaRaidGetInterval);
+	registerMethod("Raid", "getNextExecution", LuaScriptInterface::luaRaidGetNextExecution);
+	registerMethod("Raid", "setNextExecution", LuaScriptInterface::luaRaidSetNextExecution);
+	registerMethod("Raid", "execute", LuaScriptInterface::luaRaidExecute);
 }
 
 #undef registerEnum
@@ -4399,21 +4411,6 @@ int LuaScriptInterface::luaGameCreateTile(lua_State* L)
 
 	pushUserdata(L, tile);
 	setMetatable(L, -1, "Tile");
-	return 1;
-}
-
-int LuaScriptInterface::luaGameStartRaid(lua_State* L)
-{
-	// Game.startRaid(raidName)
-	const std::string& raidName = getString(L, 1);
-
-	Raid* raid = g_game.raids.getRaidByName(raidName);
-	if (raid) {
-		raid->startRaid();
-		pushBoolean(L, true);
-	} else {
-		lua_pushnil(L);
-	}
 	return 1;
 }
 
@@ -12000,6 +11997,85 @@ int LuaScriptInterface::luaPartySetSharedExperience(lua_State* L)
 	Party* party = getUserdata<Party>(L, 1);
 	if (party) {
 		pushBoolean(L, party->setSharedExperience(party->getLeader(), active));
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+// Raid
+int LuaScriptInterface::luaRaidCreate(lua_State* L)
+{
+	// Raid(raidName)
+	GlobalEventMap raids = g_globalEvents->getEventMap(GLOBALEVENT_RAID);
+	auto it = raids.find(getString(L, 2));
+	if (it != raids.end()) {
+		pushUserdata<GlobalEvent>(L, it->second);
+		setMetatable(L, -1, "Raid");
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int LuaScriptInterface::luaRaidDelete(lua_State* L)
+{
+	GlobalEvent** raidPtr = getRawUserdata<GlobalEvent>(L, 1);
+	if (raidPtr && *raidPtr) {
+		delete *raidPtr;
+		*raidPtr = nullptr;
+	}
+	return 0;
+}
+
+int LuaScriptInterface::luaRaidGetInterval(lua_State* L)
+{
+	// raid:getInterval()
+	GlobalEvent* raid = getUserdata<GlobalEvent>(L, 1);
+	if (raid) {
+		lua_pushnumber(L, raid->getInterval());
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int LuaScriptInterface::luaRaidGetNextExecution(lua_State* L)
+{
+	// raid:getNextExecution()
+	GlobalEvent* raid = getUserdata<GlobalEvent>(L, 1);
+	if (raid) {
+		lua_pushnumber(L, raid->getNextExecution());
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int LuaScriptInterface::luaRaidSetNextExecution(lua_State* L)
+{
+	// raid:setNextExecution(timepoint)
+	int64_t timepoint = getNumber<int64_t>(L, 2);
+	GlobalEvent* raid = getUserdata<GlobalEvent>(L, 1);
+	if (raid) {
+		if (timepoint > time(nullptr)) {
+			raid->setNextExecution(timepoint);
+			pushBoolean(L, true);
+		} else {
+			pushBoolean(L, false);
+		}
+	} else {
+		lua_pushnil(L);
+	}
+	return 1;
+}
+
+int LuaScriptInterface::luaRaidExecute(lua_State* L)
+{
+	// raid:execute()
+	GlobalEvent* raid = getUserdata<GlobalEvent>(L, 1);
+	if (raid) {
+		pushBoolean(L, raid->executeEvent());
 	} else {
 		lua_pushnil(L);
 	}

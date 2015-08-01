@@ -33,6 +33,7 @@ GlobalEvents::GlobalEvents() :
 	m_scriptInterface.initState();
 	thinkEventId = 0;
 	timerEventId = 0;
+	raidEventId = 0;
 }
 
 GlobalEvents::~GlobalEvents()
@@ -54,10 +55,13 @@ void GlobalEvents::clear()
 	thinkEventId = 0;
 	g_scheduler.stopEvent(timerEventId);
 	timerEventId = 0;
+	g_scheduler.stopEvent(raidEventId);
+	raidEventId = 0;
 
 	clearMap(thinkMap);
 	clearMap(serverMap);
 	clearMap(timerMap);
+	clearMap(raidMap);
 
 	m_scriptInterface.reInitState();
 }
@@ -78,6 +82,14 @@ bool GlobalEvents::registerEvent(Event* event, const pugi::xml_node&)
 		if (result.second) {
 			if (timerEventId == 0) {
 				timerEventId = g_scheduler.addEvent(createSchedulerTask(SCHEDULER_MINTICKS, std::bind(&GlobalEvents::timer, this)));
+			}
+			return true;
+		}
+	} else if (globalEvent->getEventType() == GLOBALEVENT_RAID) {
+		auto result = raidMap.emplace(globalEvent->getName(), globalEvent);
+		if (result.second) {
+			if (raidEventId == 0) {
+				raidEventId = g_scheduler.addEvent(createSchedulerTask(SCHEDULER_MINTICKS, std::bind(&GlobalEvents::raid, this)));
 			}
 			return true;
 		}
@@ -146,6 +158,45 @@ void GlobalEvents::timer()
 	}
 }
 
+void GlobalEvents::raid() {
+	time_t now = time(nullptr);
+
+	int64_t nextScheduledTime = std::numeric_limits<int64_t>::max();
+	auto it = raidMap.begin();
+	while (it != raidMap.end()) {
+		GlobalEvent* globalEvent = it->second;
+
+		int64_t nextExecutionTime = globalEvent->getNextExecution() - now;
+		if (nextExecutionTime > 0) {
+			if (nextExecutionTime < nextScheduledTime) {
+				nextScheduledTime = nextExecutionTime;
+			}
+
+			++it;
+			continue;
+		}
+
+		if (!globalEvent->executeEvent()) {
+			it = raidMap.erase(it);
+			continue;
+		}
+
+		nextExecutionTime = globalEvent->getInterval();
+		if (nextExecutionTime < nextScheduledTime) {
+			nextScheduledTime = nextExecutionTime;
+		}
+
+		globalEvent->setNextExecution(globalEvent->getNextExecution() + nextExecutionTime);
+
+		++it;
+	}
+
+	if (nextScheduledTime != std::numeric_limits<int64_t>::max()) {
+		raidEventId = g_scheduler.addEvent(createSchedulerTask(std::max<int64_t>(1000, nextScheduledTime * 1000),
+			std::bind(&GlobalEvents::raid, this)));
+	}
+}
+
 void GlobalEvents::think()
 {
 	int64_t now = OTSYS_TIME();
@@ -194,6 +245,7 @@ GlobalEventMap GlobalEvents::getEventMap(GlobalEvent_t type)
 	switch (type) {
 		case GLOBALEVENT_NONE: return thinkMap;
 		case GLOBALEVENT_TIMER: return timerMap;
+		case GLOBALEVENT_RAID: return raidMap;
 		case GLOBALEVENT_STARTUP:
 		case GLOBALEVENT_SHUTDOWN:
 		case GLOBALEVENT_RECORD: {
@@ -228,7 +280,67 @@ bool GlobalEvent::configureEvent(const pugi::xml_node& node)
 	m_eventType = GLOBALEVENT_NONE;
 
 	pugi::xml_attribute attr;
-	if ((attr = node.attribute("time"))) {
+	if ((attr = node.attribute("type"))) {
+		const char* value = attr.value();
+		if (strcasecmp(value, "startup") == 0) {
+			m_eventType = GLOBALEVENT_STARTUP;
+		} else if (strcasecmp(value, "shutdown") == 0) {
+			m_eventType = GLOBALEVENT_SHUTDOWN;
+		} else if (strcasecmp(value, "record") == 0) {
+			m_eventType = GLOBALEVENT_RECORD;
+		} else if (strcasecmp(value, "raid") == 0) {
+			m_eventType = GLOBALEVENT_RAID;
+
+			if ((attr = node.attribute("time"))) {
+				std::vector<int32_t> params = vectorAtoi(explodeString(attr.as_string(), ":"));
+
+				int32_t hour = params.front();
+				if (hour < 0 || hour > 23) {
+					std::cout << "[Error - GlobalEvent::configureEvent] Invalid hour \"" << attr.as_string() << "\" for globalevent with name: " << m_name << std::endl;
+					return false;
+				}
+
+				m_interval |= hour << 16;
+
+				int32_t min = 0;
+				int32_t sec = 0;
+				if (params.size() > 1) {
+					min = params[1];
+					if (min < 0 || min > 59) {
+						std::cout << "[Error - GlobalEvent::configureEvent] Invalid minute \"" << attr.as_string() << "\" for globalevent with name: " << m_name << std::endl;
+						return false;
+					}
+
+					if (params.size() > 2) {
+						sec = params[2];
+						if (sec < 0 || sec > 59) {
+							std::cout << "[Error - GlobalEvent::configureEvent] Invalid second \"" << attr.as_string() << "\" for globalevent with name: " << m_name << std::endl;
+							return false;
+						}
+					}
+				}
+
+				time_t current_time = time(nullptr);
+				tm* timeinfo = localtime(&current_time);
+				timeinfo->tm_hour = hour;
+				timeinfo->tm_min = min;
+				timeinfo->tm_sec = sec;
+
+				time_t difference = static_cast<time_t>(difftime(mktime(timeinfo), current_time));
+				if (difference < 0) {
+					difference += 86400;
+				}
+
+				m_nextExecution = current_time + difference;
+			} else if ((attr = node.attribute("interval"))) {
+				m_interval = pugi::cast<int32_t>(attr.value());
+				m_nextExecution = time(nullptr) + m_interval;
+			}
+		} else {
+			std::cout << "[Error - GlobalEvent::configureEvent] No valid type \"" << attr.as_string() << "\" for globalevent with name " << m_name << std::endl;
+			return false;
+		}
+	} else if ((attr = node.attribute("time"))) {
 		std::vector<int32_t> params = vectorAtoi(explodeString(attr.as_string(), ":"));
 
 		int32_t hour = params.front();
@@ -270,18 +382,6 @@ bool GlobalEvent::configureEvent(const pugi::xml_node& node)
 
 		m_nextExecution = current_time + difference;
 		m_eventType = GLOBALEVENT_TIMER;
-	} else if ((attr = node.attribute("type"))) {
-		const char* value = attr.value();
-		if (strcasecmp(value, "startup") == 0) {
-			m_eventType = GLOBALEVENT_STARTUP;
-		} else if (strcasecmp(value, "shutdown") == 0) {
-			m_eventType = GLOBALEVENT_SHUTDOWN;
-		} else if (strcasecmp(value, "record") == 0) {
-			m_eventType = GLOBALEVENT_RECORD;
-		} else {
-			std::cout << "[Error - GlobalEvent::configureEvent] No valid type \"" << attr.as_string() << "\" for globalevent with name " << m_name << std::endl;
-			return false;
-		}
 	} else if ((attr = node.attribute("interval"))) {
 		m_interval = std::max<int32_t>(SCHEDULER_MINTICKS, pugi::cast<int32_t>(attr.value()));
 		m_nextExecution = OTSYS_TIME() + m_interval;
@@ -298,6 +398,7 @@ std::string GlobalEvent::getScriptEventName() const
 		case GLOBALEVENT_STARTUP: return "onStartup";
 		case GLOBALEVENT_SHUTDOWN: return "onShutdown";
 		case GLOBALEVENT_RECORD: return "onRecord";
+		case GLOBALEVENT_RAID: return "onRaid";
 		case GLOBALEVENT_TIMER: return "onTime";
 		default: return "onThink";
 	}
